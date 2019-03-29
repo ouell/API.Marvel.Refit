@@ -1,21 +1,22 @@
-﻿using System;
-using System.ComponentModel;
-using System.ComponentModel.Design;
-using Microsoft.Extensions.Configuration;
-using System.IO;
-using System.Linq;
-using System.Text;
-using API.Marvel.Refit.Helpers;
-using API.Marvel.Refit.Interfaces;
+﻿using API.Marvel.Refit.Interfaces;
 using API.Marvel.Refit.Model;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Refit;
+using System;
+using System.IO;
 
 namespace API.Marvel.Refit
 {
-    class Program
+    /// <summary>
+    /// Classe responsável pelo programa
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Main
+        /// </summary>
+        private static void Main()
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -25,21 +26,23 @@ namespace API.Marvel.Refit
             var ts = DateTime.Now.Ticks.ToString();
             var publicKey = config.GetSection("Marvel:PublicKey").Value;
             var hash = Util.GerarHash(ts, publicKey, config.GetSection("Marvel:PrivateKey").Value);
-            var fim = 1;
-            while (fim != 0)
+
+            Console.WriteLine("API Marvel - Refit\r");
+
+            var opcao = PersonagensEnum.CapitaoAmerica;
+            while (opcao != PersonagensEnum.Sair)
             {
-                var opcao = Menu();
-                if (opcao == Personagens.Sair)
+                opcao = Util.Menu();
+                if (opcao == PersonagensEnum.Sair)
                     break;
 
-                var characterAPI = RestService.For<ICharacters>(config.GetSection("UrlBase").Value);
+                var characterApi = RestService.For<ICharacters>(config.GetSection("UrlBase").Value);
 
-                var resultado = characterAPI.Character(ts, publicKey, hash, GetEnumDescription(opcao)).Result;
+                var resultado = characterApi.Character(ts, publicKey, hash, Util.GetEnumDescription(opcao)).Result;
                 resultado.EnsureSuccessStatusCode();
 
-                string conteudo =
-                    resultado.Content.ReadAsStringAsync().Result;
-
+                var conteudo = resultado.Content.ReadAsStringAsync().Result;
+                
                 dynamic dados = JsonConvert.DeserializeObject(conteudo);
 
                 var personagem = new Personagem
@@ -53,45 +56,6 @@ namespace API.Marvel.Refit
 
                 Console.WriteLine(JsonConvert.SerializeObject(personagem));
             }
-        }
-
-        internal static Personagens Menu()
-        {
-            Console.WriteLine("API Marvel - Refit\r");
-            Console.WriteLine($"{new string('-', 70)}\r");
-            Console.WriteLine("Digite o número correspondente ao personagem: \n");
-            
-            var personagens = new StringBuilder();
-            personagens.Append($"{Personagens.CapitaoAmerica}: {(int)(Personagens.CapitaoAmerica)}\r\n");
-            personagens.Append($"{Personagens.DoutorEstranho}: {(int)(Personagens.DoutorEstranho)}\r\n");
-            personagens.Append($"{Personagens.IronMan}: {(int)(Personagens.IronMan)}\r\n");
-            personagens.Append($"{Personagens.SpiderMan}: {(int)(Personagens.SpiderMan)}\r\n");
-            personagens.Append($"{Personagens.Thor}: {(int)(Personagens.Thor)}\r\n");
-            personagens.Append($"{Personagens.Sair}: {(int)(Personagens.Sair)}\r");
-
-            Console.WriteLine(personagens);
-            Console.WriteLine($"{new string('-', 70)}\r");
-            Console.Write("Opção escolhida: ");
-
-            var opcao = Console.ReadLine();
-            Console.WriteLine($"Opção escolhida: {opcao}");
-
-            return (Personagens)int.Parse(opcao);
-        }
-
-        private static string GetEnumDescription(Enum value)
-        {
-            var enumType = value.GetType();
-
-            if (!Enum.IsDefined(enumType, value))
-                return string.Empty;
-
-            // get attributes  
-            var field = enumType.GetField(value.ToString());
-            var attributes = field.GetCustomAttributes(typeof(DescriptionAttribute), false);
-
-            // return description
-            return attributes.Any() ? ((DescriptionAttribute)attributes.First()).Description : value.ToString();
         }
     }
 }

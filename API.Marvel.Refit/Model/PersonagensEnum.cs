@@ -2,7 +2,7 @@
 
 namespace API.Marvel.Refit.Model
 {
-    public enum Personagens
+    public enum PersonagensEnum
     {
         [Description("Sair")]
         Sair = 0,
